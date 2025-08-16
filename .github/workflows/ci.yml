@@ -1,44 +1,46 @@
-name: CI
+name: Deploy Multiple Nx Apps to AWS S3
 
 on:
   push:
     branches:
-      - master
-  pull_request:
-
-permissions:
-  actions: read
-  contents: read
+      - main   # deploy only when main branch is updated
 
 jobs:
-  main:
+  deploy:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        app: [react-host, marel, dashboard]   # 🔹 List of apps in your Nx workspace
+        include:
+          - app: shell
+            bucket: nx-omniblu
+          - app: machineDashboard
+            bucket: nx-omniblu-m-dashboard
+          - app: angular
+            bucket: nx-omniblu-angular
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          filter: tree:0
-          fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      # Uncomment this line to enable task distribution
-      # - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
-
-      
-      # Cache node_modules
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: 'npm'
-       
-      - run: npm ci --legacy-peer-deps
 
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
 
-      # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
-      # - run: npx nx-cloud record -- echo Hello World
-      - run: npx nx run-many -t lint test build
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
-      - run: npx nx fix-ci
-        if: always()
+      - name: Build Nx App
+        run: npx nx build ${{ matrix.app }} --configuration=production
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1   # change if your S3 bucket is in another region
+
+      - name: Deploy to S3
+        run: aws s3 sync dist/apps/${{ matrix.app }} s3://${{ matrix.bucket }} --delete

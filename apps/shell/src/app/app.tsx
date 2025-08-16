@@ -4,7 +4,7 @@ import { Link, Route, Routes } from 'react-router-dom';
 import { loadRemote } from '@module-federation/enhanced/runtime';
 
 const MachineDashboard = React.lazy(
-  () => loadRemote('machine-dashboard/Module') as any
+  () => loadRemote('machineDashboard/Module') as any
 );
 
 export function App() {
