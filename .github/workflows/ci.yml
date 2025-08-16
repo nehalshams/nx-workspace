@@ -11,7 +11,7 @@ jobs:
 
     strategy:
       matrix:
-        app: [host, machineDashboard, angular]   # 🔹 List of apps in your Nx workspace
+        app: [shell, machineDashboard, angular]   # 🔹 List of apps in your Nx workspace
         include:
           - app: shell
             bucket: nx-omniblu
